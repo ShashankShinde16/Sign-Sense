@@ -13,16 +13,21 @@
 
     <div id="stream-wrapper">
         <div id="video-streams"></div>
-
         <div id="stream-controls">
             <button id="leave-btn">Leave Stream</button>
             <button id="mic-btn">Mic On</button>
             <button id="camera-btn">Camera on</button>
         </div>
     </div>
+
+
+    <video id="video" autoplay style="display: none;"></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+
     
 </body>
-<!-- <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script> -->
+<script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
 <script src="{{ url_for('static', filename='javascript/AgoraRTC_N-4.7.3.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/main.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/video.js') }}"></script>
 </html>

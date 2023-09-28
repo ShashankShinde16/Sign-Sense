@@ -1,11 +1,16 @@
 const APP_ID = "5755090a0f104518988599c139216179"
-const TOKEN = "007eJxTYOgq2CRnYXBA8xanh7t8WV5Pb+25Cwc3n7NvOKgT1dbKLKfAYJxsYWxgZmFibmBmamJmZmlhZmyYaGhgYGqQlmJikpR8VvVdSkMgI8OGo+uYGRkgEMTnYCjOSASivGwGBgAwKB+C"
+const TOKEN = "007eJxTYHBS7X8iOmnqxUlaoUHz/597ltMY8+rJg+kHv7h84Vpe/TtdgcE42cLYwMzCxNzAzNTEzMzSwszYMNHQwMDUIC3FxCQpeVG4aGpDICPD5cVCrIwMEAjiczAUZyQCUV42AwMAcdcihQ=="
 const CHANNEL = "shashank"
 
 const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' })
 
 let localTracks = []
 let remoteUsers = {}
+
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+let mediaRecorder;
+let imageIndex = 0;
 
 let joinAndDisplayLocalStream = async () => {
 
@@ -31,6 +36,57 @@ let joinStream = async () => {
     await joinAndDisplayLocalStream()
     document.getElementById('join-btn').style.display = 'none'
     document.getElementById('stream-controls').style.display = 'flex'
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+
+        // Set up the canvas for capturing frames
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                const blob = event.data;
+
+                // Convert the canvas content to JPG
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob((jpegBlob) => {
+                    const formData = new FormData();
+                    formData.append('image', jpegBlob, `frame_${imageIndex++}.jpg`);
+                canvas.style.display = 'none'; // Hide the canvas element
+
+                    // Send the frame as an image to Flask using a fetch request
+                    fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => console.log(data))
+                    .catch(error => console.error('Error:', error));
+                }, 'image/jpeg');
+            }
+        };
+
+        mediaRecorder.onstop = () => {
+            stream.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
+            stopButton.disabled = true;
+            startButton.disabled = false;
+        };
+
+        mediaRecorder.start(33); // Capture frames every second
+        stopButton.disabled = false;
+        startButton.disabled = true;
+    } catch (error) {
+        console.error('Error accessing webcam:', error);
+    }
+
 }
 
 let handleUserJoined = async (user, mediaType) => {
@@ -71,6 +127,10 @@ let leaveAndRemoveLocalStream = async () => {
     document.getElementById('join-btn').style.display = 'block'
     document.getElementById('stream-controls').style.display = 'none'
     document.getElementById('video-streams').innerHTML = ''
+
+    if (mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+    }
 }
 
 let toggleMic = async (e) => {
